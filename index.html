@@ -4,8 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HSE Päivämuistilista</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/HSE-daily/manifest.json">
   <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     body { margin: 0; background:#f6f7f9; color:#111; }
@@ -1036,5 +1039,14 @@
   </script>
 
   <!-- Optional: service worker registration if you later add sw.js -->
-  </body>
+  <script>
+  // PWA offline cache (GitHub Pages subpath safe)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/HSE-daily/sw.js", { scope: "/HSE-daily/" }).catch(() => {});
+    });
+  }
+</script>
+
+</body>
 </html>
