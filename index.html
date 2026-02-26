@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HSE Päivämuistilista</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111">
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#f6f7f9; color:#111; }
+    header { position: sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; padding:12px 14px; z-index: 5; }
+    h1 { font-size: 18px; margin: 0 0 6px 0; }
+    .sub { font-size: 12px; color:#555; margin:0; }
+    main { padding: 12px 14px 120px; max-width: 980px; margin: 0 auto; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; margin: 10px 0; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    label { font-size: 12px; color:#444; display:block; margin-bottom:6px; }
+    input[type="text"], input[type="date"], input[type="time"], textarea, select {
+      width: 100%; padding: 10px 10px; border:1px solid #d1d5db; border-radius:10px; font-size: 14px; background:#fff;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .col { flex: 1 1 220px; }
+    .checklist { display:grid; gap:10px; }
+    .sectionTitle { font-weight: 700; margin: 0 0 8px 0; }
+    .item { display:flex; gap:10px; align-items:flex-start; }
+    .item input { transform: translateY(3px); }
+    .item .txt { font-size: 14px; }
+    .footerBar {
+      position: fixed; left:0; right:0; bottom:0;
+      background:#fff; border-top:1px solid #e5e7eb;
+      padding: 10px 12px; display:flex; gap:10px; justify-content:space-between; align-items:center;
+      z-index: 10;
+    }
+    button {
+      border:0; border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600;
+      background:#111; color:#fff; cursor:pointer;
+    }
+    button.secondary { background:#374151; }
+    button.ghost { background:#fff; color:#111; border:1px solid #d1d5db; }
+    button.danger { background:#b91c1c; }
+    .status { font-size: 12px; color:#555; }
+    .small { font-size: 12px; color:#666; }
+    .hint { font-size: 12px; color:#555; margin: 8px 0 0; }
+    .thumbs { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .thumb { width: 92px; height: 92px; border-radius: 12px; border:1px solid #e5e7eb; object-fit: cover; background:#f3f4f6; }
+    .thumbWrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+    .thumbBtns { display:flex; gap:6px; }
+    .thumbBtns button { padding: 6px 8px; border-radius: 10px; font-size: 12px; }
+    .divider { height:1px; background:#e5e7eb; margin: 10px 0; }
+    .canvasWrap { border:1px dashed #d1d5db; border-radius: 12px; padding: 10px; background:#fafafa; }
+    canvas { width: 100%; height: 160px; background:#fff; border:1px solid #e5e7eb; border-radius: 10px; touch-action: none; }
+    .right { display:flex; justify-content:flex-end; }
+    .tableWrap { overflow:auto; border:1px solid #e5e7eb; border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; background:#fff; }
+    th, td { border-bottom:1px solid #eef2f7; padding: 8px; vertical-align: top; }
+    th { text-align:left; font-size: 12px; color:#374151; background:#f9fafb; position: sticky; top: 0; }
+    td input, td select { padding: 8px 8px; border-radius: 10px; font-size: 13px; }
+    td .tinyBtn { padding: 6px 8px; border-radius: 10px; font-size: 12px; }
+    .barBtns { display:flex; gap:10px; flex-wrap:wrap; }
+  </style>
+
+  <!-- jsPDF (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>HSE Päivämuistilista</h1>
+    <p class="sub">Täytä päivittäin → tallenna → PDF (jaettavissa)</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Päivämäärä</label>
+          <input id="date" type="date" />
+        </div>
+        <div class="col">
+          <label>Työmaa / projekti</label>
+          <input id="site" type="text" placeholder="Esim. Boden – Teräsrungot" />
+        </div>
+        <div class="col">
+          <label>Tilaaja / asiakas</label>
+          <input id="client" type="text" placeholder="Esim. NCC / SSAB / Stegra" />
+        </div>
+        <div class="col">
+          <label>Tunniste (valinnainen)</label>
+          <input id="report_id" type="text" placeholder="Esim. HSE-Daily-001" />
+        </div>
+        <div class="col">
+          <label>Rooli</label>
+          <select id="role">
+            <option>HSE Manager</option>
+            <option>HSE Coordinator</option>
+            <option>Työnjohto</option>
+            <option>Muu</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Sää / olosuhteet (valinnainen)</label>
+          <input id="conditions" type="text" placeholder="Esim. pakkanen, tuuli, liukkaus" />
+        </div>
+      </div>
+      <p class="hint">Vinkki: tämä toimii offline, kun olet avannut sivun kerran.</p>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">1) Päivän aloitus (aamu)</p>
+      <div class="checklist" id="section_morning"></div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">2) Kierros 1 (aamupäivä)</p>
+      <div class="checklist" id="section_walk1"></div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">3) Havainnot & puuttuminen</p>
+      <div class="checklist" id="section_actions"></div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <label>Keskeiset havainnot (vapaa teksti)</label>
+          <textarea id="notes" placeholder="Kirjaa havainnot, missä, mitä, kenen kanssa sovittiin..."></textarea>
+        </div>
+        <div class="col">
+          <label>Korjaavat toimet (kuka–mitä–mihin mennessä)</label>
+          <textarea id="capas" placeholder="Esim. Aliurakoitsija X: aukotus suojataan 26.2.2026 klo 14:00 mennessä"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">4) Aliurakoitsijat & työnjohto</p>
+      <div class="checklist" id="section_subs"></div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">5) Ympäristö (E)</p>
+      <div class="checklist" id="section_env"></div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">6) Poikkeamat / tapaturmat</p>
+      <div class="row">
+        <div class="col">
+          <label>Tapahtui poikkeama?</label>
+          <select id="incident">
+            <option value="ei">Ei</option>
+            <option value="near_miss">Läheltä piti</option>
+            <option value="first_aid">Ensiaputapaus</option>
+            <option value="lti">Tapaturma (LTI)</option>
+            <option value="env">Ympäristöpoikkeama</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Kuvaus (jos kyllä)</label>
+          <input id="incident_desc" type="text" placeholder="Lyhyt kuvaus" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">7) Päivän lopetus</p>
+      <div class="checklist" id="section_end"></div>
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <label>Huomisen kriittiset työvaiheet</label>
+          <textarea id="tomorrow" placeholder="Esim. nostot, kaivanto, kuumat työt, LOTO..."></textarea>
+        </div>
+        <div class="col">
+          <label>Yhteenveto (1–3 riviä)</label>
+          <textarea id="summary" placeholder="Päivän HSE-tilanne, tärkein riski ja tärkein toimenpide"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <div>
+          <p class="sectionTitle" style="margin:0;">8) Havaintotaulukko (päivän löydökset)</p>
+          <p class="hint" style="margin:6px 0 0;">Lisää rivit, kuittaa status ja exportoi PDF:ään.</p>
+        </div>
+        <div class="barBtns">
+          <button class="ghost" id="btnAddObs" type="button">+ Lisää rivi</button>
+          <button class="ghost danger" id="btnClearObs" type="button">Tyhjennä taulukko</button>
+        </div>
+      </div>
+
+      <div style="height:10px;"></div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Aika</th>
+              <th style="width:140px;">Sijainti</th>
+              <th>Havainto</th>
+              <th style="width:120px;">Vakavuus</th>
+              <th>Toimenpide</th>
+              <th style="width:160px;">Vastuuhenkilö</th>
+              <th style="width:130px;">Deadline</th>
+              <th style="width:120px;">Status</th>
+              <th style="width:90px;">Poista</th>
+            </tr>
+          </thead>
+          <tbody id="obsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">9) Kuvat (1–5 kpl)</p>
+      <div class="row">
+        <div class="col">
+          <label>Lisää kuvia</label>
+          <input id="photos" type="file" accept="image/*" multiple />
+          <p class="hint">Kuvat pienennetään automaattisesti ja liitetään PDF:ään.</p>
+        </div>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="right" style="margin-top:10px;">
+        <button class="ghost danger" id="btnClearPhotos" type="button">Tyhjennä kuvat</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">10) Allekirjoitus</p>
+      <div class="row">
+        <div class="col">
+          <label>Allekirjoittajan nimi</label>
+          <input id="sign_name" type="text" placeholder="Esim. Markus Ylimäki" />
+        </div>
+        <div class="col">
+          <label>Titteli / yritys (valinnainen)</label>
+          <input id="sign_title" type="text" placeholder="Esim. HSE Manager / Rymy Consulting" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="canvasWrap">
+        <label>Piirrä allekirjoitus (sormella)</label>
+        <canvas id="sign_canvas" width="900" height="300"></canvas>
+        <div class="right" style="margin-top:10px; gap:10px; display:flex;">
+          <button class="ghost danger" id="btnClearSign" type="button">Tyhjennä allekirjoitus</button>
+        </div>
+        <p class="hint">Allekirjoitus lisätään PDF:n loppuun.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionTitle">Tallennetut päivät</p>
+      <div id="savedList" class="small"></div>
+    </div>
+  </main>
+
+  <div class="footerBar">
+    <div class="status" id="status">Ei tallennettu.</div>
+    <div class="barBtns">
+      <button class="ghost" id="btnNew">Uusi päivä</button>
+      <button class="secondary" id="btnSave">Tallenna</button>
+      <button id="btnPdf">Export PDF</button>
+      <button class="secondary" id="btnShare">Jaa PDF</button>
+    </div>
+  </div>
+
+  <script>
+    const CHECKLIST = {
+      morning: [
+        "Päivän riskit & kriittiset työvaiheet läpi (nostot, kaivannot, LOTO, kuumat työt, korkealla työ, confined space)",
+        "Työluvat (PTW) kunnossa ja allekirjoitettu",
+        "Perehdytykset: uudet henkilöt / vierailijat hoidettu ja kirjattu",
+        "Aliurakoitsijoiden päivän suunnitelma tarkistettu (method statement / JSA)",
+        "Hätätilannevalmius: ensiapu, poistumistiet, kokoontumispaikka, sammuttimet OK"
+      ],
+      walk1: [
+        "Siisteys & järjestys: kulkureitit vapaat, materiaalit pinottu oikein",
+        "Putoamissuojaus: kaiteet, aukotukset, valjaat, kiinnityspisteet",
+        "Telineet & nostimet: tarkastustagit, kunto, hyväksynnät",
+        "Sähköturvallisuus: johdot/taulut ehjät, suojaukset, LOTO käytössä",
+        "Kaivannot: tuennat/luiskat, kulkutiet, merkinnät",
+        "Nostot: nostosuunnitelma, pätevyydet, nostovarusteet, eristykset, spotter",
+        "Kuumat työt: lupa, suojaus, sammutin/vahtimies, jälkivartiointi",
+        "PPE: oikein valittu ja käytössä"
+      ],
+      actions: [
+        "Kirjasin havainnot (safety observation / near miss) heti",
+        "Puutuin vaaralliseen toimintaan (Stop Work tarvittaessa)",
+        "Sovittiin korjaavat toimet (kuka–mitä–mihin mennessä) ja ne kirjattu"
+      ],
+      subs: [
+        "Toolbox talk / turvavartti pidetty (päivän kriittisen työn mukaan)",
+        "JSA/TRA tehty ja ymmärretty (ei vain paperi)",
+        "Pätevyydet tarkistettu (tulityö, teline, nostot, sähkö, trukki, EA)",
+        "Pikainen auditointi tehty yhdelle urakoitsijalle (5–10 min)"
+      ],
+      env: [
+        "Jätehuolto & lajittelu toimii (astiat merkitty, ei ylitäyttöä)",
+        "Kemikaalit: varastointi, vuotosuoja, SDS saatavilla, merkinnät OK",
+        "Pöly/melu hallinnassa (kastelu, suojaukset, työajat)",
+        "Hulevedet/maaperäsuojaus: ei valumia, varautuminen ok"
+      ],
+      end: [
+        "Korjaavat toimet etenevät / suljin tehtäviä",
+        "Päivän raportointi: havainnot, poikkeamat, PTW-status",
+        "Huomisen kriittiset työvaiheet ennakoitu (lupa/plan tarve)"
+      ]
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const storageKey = (date) => `hse_entry_${date}`;
+    const pad2 = (n) => String(n).padStart(2, "0");
+
+    function todayISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+
+    // ----------------------------
+    // Checklist rendering
+    // ----------------------------
+    function renderChecklist(containerId, items, prefix) {
+      const el = $(containerId);
+      el.innerHTML = "";
+      items.forEach((txt, i) => {
+        const key = `${prefix}_${i}`;
+        const row = document.createElement("div");
+        row.className = "item";
+        row.innerHTML = `
+          <input type="checkbox" id="${key}">
+          <div class="txt"><label for="${key}" style="display:inline; margin:0; font-size:14px; color:#111;">${txt}</label></div>
+        `;
+        el.appendChild(row);
+      });
+    }
+
+    // ----------------------------
+    // Signature canvas
+    // ----------------------------
+    function initSignaturePad() {
+      const canvas = $("sign_canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#111";
+
+      let drawing = false;
+      let last = null;
+
+      const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches?.[0];
+        const clientX = touch ? touch.clientX : e.clientX;
+        const clientY = touch ? touch.clientY : e.clientY;
+        const x = (clientX - rect.left) * (canvas.width / rect.width);
+        const y = (clientY - rect.top) * (canvas.height / rect.height);
+        return { x, y };
+      };
+
+      const start = (e) => { drawing = true; last = getPos(e); e.preventDefault(); };
+      const move = (e) => {
+        if (!drawing) return;
+        const pos = getPos(e);
+        ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+        last = pos; e.preventDefault(); setStatus("Muutoksia tehty (muista tallentaa).");
+      };
+      const end = (e) => { drawing = false; last = null; e.preventDefault(); };
+
+      canvas.addEventListener("mousedown", start);
+      canvas.addEventListener("mousemove", move);
+      window.addEventListener("mouseup", end);
+      canvas.addEventListener("touchstart", start, { passive: false });
+      canvas.addEventListener("touchmove", move, { passive: false });
+      canvas.addEventListener("touchend", end, { passive: false });
+
+      $("btnClearSign").addEventListener("click", () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setStatus("Allekirjoitus tyhjennetty (muista tallentaa).");
+      });
+    }
+
+    function getSignatureDataUrl() { return $("sign_canvas").toDataURL("image/png"); }
+    function setSignatureFromDataUrl(dataUrl) {
+      const canvas = $("sign_canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = dataUrl;
+    }
+
+    // ----------------------------
+    // Photos (compress + store)
+    // ----------------------------
+    let photoDataUrls = []; // array of base64 data urls (jpeg)
+
+    function renderThumbs() {
+      const el = $("thumbs");
+      el.innerHTML = "";
+      if (photoDataUrls.length === 0) { el.innerHTML = `<div class="small">Ei kuvia vielä.</div>`; return; }
+
+      photoDataUrls.forEach((url, idx) => {
+        const wrap = document.createElement("div");
+        wrap.className = "thumbWrap";
+        wrap.innerHTML = `
+          <img class="thumb" src="${url}" alt="photo ${idx+1}">
+          <div class="thumbBtns">
+            <button class="ghost danger" type="button" onclick="window.__removePhoto(${idx})">Poista</button>
+          </div>
+        `;
+        el.appendChild(wrap);
+      });
+    }
+    window.__removePhoto = (idx) => { photoDataUrls.splice(idx, 1); renderThumbs(); setStatus("Kuva poistettu (muista tallentaa)."); };
+
+    function clearPhotos() { photoDataUrls = []; $("photos").value = ""; renderThumbs(); setStatus("Kuvat tyhjennetty (muista tallentaa)."); }
+    $("btnClearPhotos").addEventListener("click", clearPhotos);
+
+    async function fileToCompressedDataUrl(file, maxW = 1400, quality = 0.75) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = dataUrl;
+      });
+
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      return c.toDataURL("image/jpeg", quality);
+    }
+
+    $("photos").addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      const spaceLeft = 5 - photoDataUrls.length;
+      const selected = files.slice(0, spaceLeft);
+
+      for (const f of selected) {
+        try { photoDataUrls.push(await fileToCompressedDataUrl(f)); }
+        catch (err) { alert("Kuvan käsittely epäonnistui: " + (err?.message || err)); }
+      }
+      if (files.length > selected.length) alert("Maksimi on 5 kuvaa per päivä. Loput jätettiin pois.");
+      renderThumbs();
+      setStatus("Kuvat lisätty (muista tallentaa).");
+    });
+
+    // ----------------------------
+    // Observations table
+    // ----------------------------
+    let observations = [];
+
+    function emptyObsRow() {
+      return {
+        time: "",
+        location: "",
+        observation: "",
+        severity: "Medium",
+        action: "",
+        responsible: "",
+        due: "",
+        status: "Open"
+      };
+    }
+
+    function escapeHtml(s) {
+      return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+    }
+
+    function renderObservations() {
+      const body = $("obsBody");
+      body.innerHTML = "";
+
+      if (observations.length === 0) observations.push(emptyObsRow());
+
+      observations.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="time" value="${row.time || ""}" data-k="time" data-i="${idx}"></td>
+          <td><input type="text" value="${escapeHtml(row.location || "")}" data-k="location" data-i="${idx}" placeholder="Esim. A-lohko"></td>
+          <td><input type="text" value="${escapeHtml(row.observation || "")}" data-k="observation" data-i="${idx}" placeholder="Mitä havaittiin?"></td>
+          <td>
+            <select data-k="severity" data-i="${idx}">
+              <option ${row.severity==="Low"?"selected":""}>Low</option>
+              <option ${row.severity==="Medium"?"selected":""}>Medium</option>
+              <option ${row.severity==="High"?"selected":""}>High</option>
+            </select>
+          </td>
+          <td><input type="text" value="${escapeHtml(row.action || "")}" data-k="action" data-i="${idx}" placeholder="Mitä tehdään?"></td>
+          <td><input type="text" value="${escapeHtml(row.responsible || "")}" data-k="responsible" data-i="${idx}" placeholder="Nimi/yritys"></td>
+          <td><input type="date" value="${row.due || ""}" data-k="due" data-i="${idx}"></td>
+          <td>
+            <select data-k="status" data-i="${idx}">
+              <option ${row.status==="Open"?"selected":""}>Open</option>
+              <option ${row.status==="In Progress"?"selected":""}>In Progress</option>
+              <option ${row.status==="Closed"?"selected":""}>Closed</option>
+            </select>
+          </td>
+          <td><button class="ghost danger tinyBtn" type="button" data-del="${idx}">Poista</button></td>
+        `;
+        body.appendChild(tr);
+      });
+
+      body.querySelectorAll("input, select").forEach(el => {
+        el.addEventListener("change", (ev) => {
+          const i = Number(ev.target.getAttribute("data-i"));
+          const k = ev.target.getAttribute("data-k");
+          if (!Number.isFinite(i) || !k) return;
+          observations[i][k] = ev.target.value;
+          setStatus("Muutoksia tehty (muista tallentaa).");
+        });
+      });
+
+      body.querySelectorAll("button[data-del]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.getAttribute("data-del"));
+          observations.splice(idx, 1);
+          renderObservations();
+          setStatus("Havaintorivi poistettu (muista tallentaa).");
+        });
+      });
+    }
+
+    $("btnAddObs").addEventListener("click", () => {
+      observations.push(emptyObsRow());
+      renderObservations();
+      setStatus("Havaintorivi lisätty (muista tallentaa).");
+    });
+
+    $("btnClearObs").addEventListener("click", () => {
+      observations = [emptyObsRow()];
+      renderObservations();
+      setStatus("Havaintotaulukko tyhjennetty (muista tallentaa).");
+    });
+
+    // ----------------------------
+    // Form data get/set
+    // ----------------------------
+    function getFormData() {
+      const data = {
+        date: $("date").value,
+        site: $("site").value.trim(),
+        client: $("client").value.trim(),
+        report_id: $("report_id").value.trim(),
+        role: $("role").value,
+        conditions: $("conditions").value.trim(),
+        incident: $("incident").value,
+        incident_desc: $("incident_desc").value.trim(),
+        notes: $("notes").value.trim(),
+        capas: $("capas").value.trim(),
+        tomorrow: $("tomorrow").value.trim(),
+        summary: $("summary").value.trim(),
+        sign_name: $("sign_name").value.trim(),
+        sign_title: $("sign_title").value.trim(),
+        signature_dataurl: getSignatureDataUrl(),
+        photos: [...photoDataUrls],
+        observations: JSON.parse(JSON.stringify(observations)),
+        checks: {}
+      };
+      for (const [sec, items] of Object.entries(CHECKLIST)) {
+        data.checks[sec] = items.map((_, i) => $(`${sec}_${i}`).checked);
+      }
+      return data;
+    }
+
+    function setFormData(data) {
+      $("date").value = data?.date || todayISO();
+      $("site").value = data?.site || "";
+      $("client").value = data?.client || "";
+      $("report_id").value = data?.report_id || "";
+      $("role").value = data?.role || "HSE Manager";
+      $("conditions").value = data?.conditions || "";
+      $("incident").value = data?.incident || "ei";
+      $("incident_desc").value = data?.incident_desc || "";
+      $("notes").value = data?.notes || "";
+      $("capas").value = data?.capas || "";
+      $("tomorrow").value = data?.tomorrow || "";
+      $("summary").value = data?.summary || "";
+      $("sign_name").value = data?.sign_name || "";
+      $("sign_title").value = data?.sign_title || "";
+
+      for (const [sec, items] of Object.entries(CHECKLIST)) {
+        items.forEach((_, i) => {
+          $(`${sec}_${i}`).checked = data?.checks?.[sec]?.[i] ?? false;
+        });
+      }
+
+      setSignatureFromDataUrl(data?.signature_dataurl || null);
+      photoDataUrls = Array.isArray(data?.photos) ? data.photos : [];
+      renderThumbs();
+
+      observations = Array.isArray(data?.observations) ? data.observations : [];
+      renderObservations();
+    }
+
+    function setStatus(msg) { $("status").textContent = msg; }
+
+    function saveEntry() {
+      const data = getFormData();
+      if (!data.date) { alert("Aseta päivämäärä ennen tallennusta."); return; }
+      try { localStorage.setItem(storageKey(data.date), JSON.stringify(data)); }
+      catch (e) {
+        alert("Tallennus epäonnistui (todennäköisesti tallennustila täynnä). Poista kuvia tai vanhoja tallenteita.");
+        return;
+      }
+      setStatus(`Tallennettu: ${data.date}`);
+      renderSavedList();
+    }
+
+    function loadEntry(date) {
+      const raw = localStorage.getItem(storageKey(date));
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
+    function deleteEntry(date) { localStorage.removeItem(storageKey(date)); renderSavedList(); setStatus(`Poistettu tallenne: ${date}`); }
+
+    function renderSavedList() {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith("hse_entry_")).sort().reverse();
+      if (keys.length === 0) { $("savedList").innerHTML = "Ei tallennettuja päiviä vielä."; return; }
+
+      $("savedList").innerHTML = keys.map(k => {
+        const date = k.replace("hse_entry_", "");
+        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed #e5e7eb;">
+          <span>${date}</span>
+          <span style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="ghost" style="padding:6px 10px; border-radius:10px;" onclick="window.__load('${date}')">Avaa</button>
+            <button class="ghost" style="padding:6px 10px; border-radius:10px;" onclick="window.__pdf('${date}')">PDF</button>
+            <button class="secondary" style="padding:6px 10px; border-radius:10px;" onclick="window.__share('${date}')">Jaa</button>
+            <button class="ghost danger" style="padding:6px 10px; border-radius:10px;" onclick="window.__del('${date}')">Poista</button>
+          </span>
+        </div>`;
+      }).join("");
+    }
+
+    // ----------------------------
+    // PDF helpers
+    // ----------------------------
+    function lineWrap(doc, text, x, y, maxWidth, lineHeight) {
+      const lines = doc.splitTextToSize(text || "", maxWidth);
+      lines.forEach((ln, idx) => doc.text(ln, x, y + idx * lineHeight));
+      return y + lines.length * lineHeight;
+    }
+
+    async function getImageSize(dataUrl) {
+      return await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.width, h: img.height });
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    function headerText(data) {
+      const parts = [];
+      parts.push(data.site ? data.site : "Työmaa");
+      parts.push(data.client ? data.client : "Tilaaja -");
+      parts.push(data.date ? data.date : "-");
+      if (data.report_id) parts.push(`ID: ${data.report_id}`);
+      return parts.join(" | ");
+    }
+
+    function addHeaderFooterToAllPages(doc, data) {
+      const total = doc.getNumberOfPages();
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 40;
+
+      for (let p = 1; p <= total; p++) {
+        doc.setPage(p);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(headerText(data), margin, 22);
+
+        doc.setDrawColor(220);
+        doc.line(margin, 28, pageW - margin, 28);
+
+        doc.setTextColor(90);
+        doc.text(`Sivu ${p}/${total}`, pageW - margin, pageH - 18, { align: "right" });
+      }
+
+      doc.setTextColor(0);
+    }
+
+    function safeFileName(data) {
+      const safeSite = (data.site || "tyomaa").replaceAll(" ", "_").replaceAll("/", "_");
+      const safeId = data.report_id ? ("_" + data.report_id.replaceAll(" ", "_").replaceAll("/", "_")) : "";
+      return `HSE_${data.date || "paiva"}_${safeSite}${safeId}.pdf`;
+    }
+
+    async function buildPdf(data) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+      const margin = 40;
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const maxW = pageW - margin * 2;
+
+      let y = 44;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("HSE Päiväraportti", margin, y); y += 22;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Päivämäärä: ${data.date || "-"}`, margin, y); y += 16;
+      doc.text(`Työmaa / projekti: ${data.site || "-"}`, margin, y); y += 16;
+      doc.text(`Tilaaja / asiakas: ${data.client || "-"}`, margin, y); y += 16;
+      doc.text(`Tunniste: ${data.report_id || "-"}`, margin, y); y += 16;
+      doc.text(`Rooli: ${data.role || "-"}`, margin, y); y += 16;
+      doc.text(`Olosuhteet: ${data.conditions || "-"}`, margin, y);
+
+      y += 20;
+      doc.setFont("helvetica", "bold");
+      doc.text("Checklist", margin, y); y += 14;
+      doc.setFont("helvetica", "normal");
+
+      const sections = [
+        ["Päivän aloitus (aamu)", "morning"],
+        ["Kierros 1 (aamupäivä)", "walk1"],
+        ["Havainnot & puuttuminen", "actions"],
+        ["Aliurakoitsijat & työnjohto", "subs"],
+        ["Ympäristö (E)", "env"],
+        ["Päivän lopetus", "end"]
+      ];
+
+      function addPageIfNeeded(nextY) {
+        if (nextY > pageH - 60) { doc.addPage(); return 44; }
+        return nextY;
+      }
+
+      for (const [title, key] of sections) {
+        y = addPageIfNeeded(y + 18);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, margin, y);
+        y += 14;
+        doc.setFont("helvetica", "normal");
+
+        const items = CHECKLIST[key];
+        const checked = data.checks?.[key] || [];
+        for (let i = 0; i < items.length; i++) {
+          y = addPageIfNeeded(y + 14);
+          const mark = checked[i] ? "[x]" : "[ ]";
+          y = lineWrap(doc, `${mark} ${items[i]}`, margin, y, maxW, 14);
+        }
+        y += 6;
+      }
+
+      y = addPageIfNeeded(y + 18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Poikkeamat", margin, y); y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Poikkeama: ${data.incident || "ei"}`, margin, y); y += 14;
+      y = lineWrap(doc, `Kuvaus: ${data.incident_desc || "-"}`, margin, y, maxW, 14);
+
+      y = addPageIfNeeded(y + 18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Vapaa teksti", margin, y); y += 14;
+      doc.setFont("helvetica", "normal");
+      y = lineWrap(doc, `Havainnot: ${data.notes || "-"}`, margin, y, maxW, 14);
+      y += 6;
+      y = addPageIfNeeded(y + 14);
+      y = lineWrap(doc, `Korjaavat toimet (CAPA): ${data.capas || "-"}`, margin, y, maxW, 14);
+      y += 6;
+      y = addPageIfNeeded(y + 14);
+      y = lineWrap(doc, `Huomisen kriittiset työvaiheet: ${data.tomorrow || "-"}`, margin, y, maxW, 14);
+      y += 6;
+      y = addPageIfNeeded(y + 14);
+      y = lineWrap(doc, `Yhteenveto: ${data.summary || "-"}`, margin, y, maxW, 14);
+
+      // Observations page
+      const obs = Array.isArray(data.observations) ? data.observations : [];
+      const meaningfulObs = obs.filter(r => Object.values(r || {}).some(v => String(v || "").trim() !== ""));
+      doc.addPage();
+      y = 44;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Havaintotaulukko", margin, y); y += 18;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      if (meaningfulObs.length === 0) {
+        doc.text("Ei kirjattuja havaintoja.", margin, y);
+      } else {
+        const cols = [
+          { h: "Aika", w: 50 },
+          { h: "Sijainti", w: 90 },
+          { h: "Havainto", w: 170 },
+          { h: "Vaka.", w: 45 },
+          { h: "Toimenpide", w: 160 },
+          { h: "Vastuuh.", w: 90 },
+          { h: "Deadline", w: 70 },
+          { h: "Status", w: 60 }
+        ];
+        const totalW = cols.reduce((s,c)=>s+c.w,0);
+        const scale = Math.min(1, maxW / totalW);
+        cols.forEach(c => c.w = c.w * scale);
+
+        const rowH = 36;
+
+        const drawRow = (cells, y0, bold=false) => {
+          let x = margin;
+          doc.setFont("helvetica", bold ? "bold" : "normal");
+          doc.setDrawColor(220);
+          doc.rect(margin, y0 - 12, maxW, rowH);
+          for (let i=0;i<cells.length;i++) {
+            const txt = String(cells[i] ?? "");
+            const w = cols[i].w;
+            doc.text(doc.splitTextToSize(txt, w - 6), x + 3, y0);
+            x += w;
+            if (i < cells.length-1) doc.line(x, y0 - 12, x, y0 - 12 + rowH);
+          }
+          doc.setFont("helvetica", "normal");
+        };
+
+        drawRow(cols.map(c=>c.h), y, true);
+        y += rowH;
+
+        for (const r of meaningfulObs) {
+          if (y + rowH > doc.internal.pageSize.getHeight() - 50) {
+            doc.addPage();
+            y = 44;
+            drawRow(cols.map(c=>c.h), y, true);
+            y += rowH;
+          }
+
+          drawRow([
+            r.time || "",
+            r.location || "",
+            r.observation || "",
+            r.severity || "",
+            r.action || "",
+            r.responsible || "",
+            r.due || "",
+            r.status || ""
+          ], y, false);
+
+          y += rowH;
+        }
+      }
+
+      // Photos section
+      const photos = Array.isArray(data.photos) ? data.photos : [];
+      if (photos.length > 0) {
+        doc.addPage();
+        y = 44;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("Kuvat", margin, y);
+        y += 18;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+
+        const gap = 12;
+        const colW = (maxW - gap) / 2;
+        const imgMaxH = 240;
+
+        let x = margin;
+        let col = 0;
+
+        for (let i = 0; i < photos.length; i++) {
+          if (y + imgMaxH + 40 > doc.internal.pageSize.getHeight()) {
+            doc.addPage();
+            y = 44;
+            x = margin;
+            col = 0;
+          }
+
+          const url = photos[i];
+          const size = await getImageSize(url);
+          const ratio = Math.min(colW / size.w, imgMaxH / size.h);
+          const w = size.w * ratio;
+          const h = size.h * ratio;
+
+          doc.text(`Kuva ${i + 1}`, x, y);
+          y += 10;
+          doc.addImage(url, "JPEG", x, y, w, h);
+
+          if (col === 0) {
+            x = margin + colW + gap;
+            col = 1;
+            y -= 10;
+          } else {
+            x = margin;
+            col = 0;
+            y = y + imgMaxH + 22;
+          }
+        }
+      }
+
+      // Signature page
+      doc.addPage();
+      y = 44;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Allekirjoitus", margin, y);
+      y += 20;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+
+      doc.text(`Nimi: ${data.sign_name || "-"}`, margin, y); y += 16;
+      doc.text(`Titteli / yritys: ${data.sign_title || "-"}`, margin, y); y += 18;
+
+      if (data.signature_dataurl) {
+        const sigUrl = data.signature_dataurl;
+        const sigSize = await getImageSize(sigUrl);
+        const boxW = maxW;
+        const boxH = 180;
+        const ratio = Math.min(boxW / sigSize.w, boxH / sigSize.h);
+        const w = sigSize.w * ratio;
+        const h = sigSize.h * ratio;
+
+        doc.setDrawColor(140);
+        doc.rect(margin, y, boxW, boxH);
+        const sx = margin + (boxW - w) / 2;
+        const sy = y + (boxH - h) / 2;
+        doc.addImage(sigUrl, "PNG", sx, sy, w, h);
+      }
+
+      addHeaderFooterToAllPages(doc, data);
+      return doc;
+    }
+
+    async function exportPdf(forDate = null) {
+      const data = forDate ? loadEntry(forDate) : getFormData();
+      if (!data || !data.date) { alert("Ei dataa PDF:ään. Valitse päivämäärä / avaa tallennettu päivä."); return; }
+      const doc = await buildPdf(data);
+      doc.save(safeFileName(data));
+    }
+
+    async function sharePdf(forDate = null) {
+      const data = forDate ? loadEntry(forDate) : getFormData();
+      if (!data || !data.date) { alert("Ei dataa PDF:ään. Valitse päivämäärä / avaa tallennettu päivä."); return; }
+
+      const doc = await buildPdf(data);
+      const filename = safeFileName(data);
+
+      const blob = doc.output("blob");
+      const file = new File([blob], filename, { type: "application/pdf" });
+
+      const canShareFiles = !!navigator.canShare && navigator.canShare({ files: [file] });
+      if (navigator.share && canShareFiles) {
+        try {
+          await navigator.share({
+            title: "HSE Päiväraportti",
+            text: `${data.site || "Työmaa"} – ${data.date}`,
+            files: [file]
+          });
+          setStatus("PDF jaettu.");
+          return;
+        } catch (e) {
+          // user cancelled or share failed -> fallback
+        }
+      }
+
+      doc.save(filename);
+      alert("Jakaminen ei ole tuettu tässä selaimessa — tallensin PDF:n latauksena.");
+    }
+
+    // ----------------------------
+    // New day
+    // ----------------------------
+    function newDay() {
+      const signName = $("sign_name").value.trim();
+      const signTitle = $("sign_title").value.trim();
+      setFormData({ date: todayISO(), sign_name: signName, sign_title: signTitle, checks: {}, photos: [], observations: [emptyObsRow()] });
+
+      $("sign_canvas").getContext("2d").clearRect(0, 0, $("sign_canvas").width, $("sign_canvas").height);
+      clearPhotos();
+      observations = [emptyObsRow()];
+      renderObservations();
+
+      setStatus("Uusi päivä aloitettu (ei tallennettu).");
+    }
+
+    // ----------------------------
+    // Init UI
+    // ----------------------------
+    renderChecklist("section_morning", CHECKLIST.morning, "morning");
+    renderChecklist("section_walk1", CHECKLIST.walk1, "walk1");
+    renderChecklist("section_actions", CHECKLIST.actions, "actions");
+    renderChecklist("section_subs", CHECKLIST.subs, "subs");
+    renderChecklist("section_env", CHECKLIST.env, "env");
+    renderChecklist("section_end", CHECKLIST.end, "end");
+
+    initSignaturePad();
+    $("date").value = todayISO();
+
+    const existing = loadEntry(todayISO());
+    if (existing) {
+      setFormData(existing);
+      setStatus(`Avattu tallennettu: ${todayISO()}`);
+    } else {
+      setFormData({ date: todayISO(), checks: {}, photos: [], observations: [emptyObsRow()] });
+      renderThumbs();
+      renderObservations();
+      setStatus("Uusi päivä aloitettu (ei tallennettu).");
+    }
+    renderSavedList();
+
+    window.__load = (date) => {
+      const d = loadEntry(date);
+      if (!d) { alert("Tallennusta ei löytynyt."); return; }
+      setFormData(d);
+      setStatus(`Avattu tallennettu: ${date}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.__pdf = (date) => exportPdf(date);
+    window.__share = (date) => sharePdf(date);
+    window.__del = (date) => { if (confirm(`Poistetaanko tallenne ${date}?`)) deleteEntry(date); };
+
+    $("btnSave").addEventListener("click", saveEntry);
+    $("btnPdf").addEventListener("click", () => exportPdf(null));
+    $("btnShare").addEventListener("click", () => sharePdf(null));
+    $("btnNew").addEventListener("click", newDay);
+
+    document.addEventListener("change", () => setStatus("Muutoksia tehty (muista tallentaa)."));
+  </script>
+
+  <!-- Optional: service worker registration if you later add sw.js -->
+  </body>
+</html>
